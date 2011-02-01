@@ -1,5 +1,7 @@
 package Dancer::Session::MongoDB;
 
+# ABSTRACT: MongoDB session backend for Dancer.
+
 use warnings;
 use strict;
 use vars '$VERSION';
@@ -8,8 +10,6 @@ use MongoDB;
 use Dancer::Config 'setting';
 use Dancer::ModuleLoader;
 use Carp;
-
-# ABSTRACT: MongoDB session backend for Dancer.
 
 # singleton for the MongoDB connection
 my ($DB, $COLL);
