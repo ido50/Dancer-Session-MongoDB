@@ -101,7 +101,9 @@ sub init {
 	$DB = $conn->get_database($db_name);
 	$COLL = $DB->get_collection($coll_name);
 
-    $class->SUPER::init();
+    # rodrigo: relies on Mongo for a session id
+    # optionally could use this: $class->SUPER::init();
+    $class->id( "" . $COLL->insert({}) );
 }
 
 =head2 create()
@@ -124,9 +126,9 @@ a false value.
 sub retrieve($$) {
 	my ($class, $id) = @_;
 
-	my $obj = $COLL->find_one({ _id => $id }) || return;
+    my $obj = $COLL->find_one({ _id => MongoDB::OID->new( value => $id ) }) || return;
 
-	$obj->{id} = delete $obj->{_id};
+	$obj->{id} = "" . delete $obj->{_id};
 
 	return bless $obj, $class;
 }
@@ -144,9 +146,9 @@ sub flush {
 	my $self = shift;
 
 	my %obj = %$self;
-	$obj{_id} = delete $obj{id};
+	delete $obj{id};
 
-	$COLL->update({ _id => $self->id }, \%obj, { safe => 1, upsert => 1 })
+	$COLL->update({ _id => MongoDB::OID->new( value => $self->id ) }, \%obj, { safe => 1, upsert => 1 })
 		|| croak "Failed writing session to MongoDB database: ".$DB->last_error;
 
 	return $self;
@@ -162,7 +164,7 @@ occurs and the object is not removed, this method will generate a warning.
 sub destroy {
 	my $self = shift;
 
-	$COLL->remove({ _id => $_[0]->id }, { safe => 1, just_one => 1 })
+	$COLL->remove({ _id => MongoDB::OID->new( value => $_[0]->id ) }, { safe => 1, just_one => 1 })
 		|| carp "Failed removing session from MongoDB database: ".$DB->last_error;
 }
 
@@ -222,3 +224,5 @@ See http://dev.perl.org/licenses/ for more information.
 =cut
 
 1;
+
+
