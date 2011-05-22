@@ -100,6 +100,8 @@ sub init {
 	my $conn = MongoDB::Connection->new(host => $host, port => $port);
 	$DB = $conn->get_database($db_name);
 	$COLL = $DB->get_collection($coll_name);
+
+    $class->SUPER::init();
 }
 
 =head2 create()
