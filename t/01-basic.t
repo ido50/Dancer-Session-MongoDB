@@ -7,7 +7,7 @@ use Dancer::Config 'setting';
 use Dancer::Session::MongoDB;
 
 my $conn;
-eval { $conn = MongoDB::Connection->new(host => 'localhost', port => 27017); };
+eval { $conn = MongoDB::Connection->new; };
 
 SKIP: {
 	skip "MongoDB needs to be running for this test.", 4 if $@;
@@ -15,7 +15,8 @@ SKIP: {
 	eval { Dancer::Session::MongoDB->create };
 	like $@, qr/You must define the name of the MongoDB database for session use in the app's settings/, "setting mongodb_dbname is mandatory";
 
-	setting mongodb_dbname => 'test_dancer_sessions';
+	setting mongodb_session_db => 'test_dancer_sessions';
+	setting mongodb_auto_reconnect => 0;
 	my $engine;
 	eval { $engine = Dancer::Session::MongoDB->create };
 	is $@, '', 'successfully created session object';

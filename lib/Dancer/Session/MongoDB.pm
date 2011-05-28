@@ -2,6 +2,9 @@ package Dancer::Session::MongoDB;
 
 # ABSTRACT: MongoDB session backend for Dancer.
 
+our $VERSION = "0.2";
+$VERSION = eval $VERSION;
+
 use warnings;
 use strict;
 use vars '$VERSION';
@@ -22,10 +25,15 @@ Dancer::Session::MongoDB - MongoDB session backend for Dancer.
 
 	# in your config.yml file:
 	session: "MongoDB"
-	mongodb_dbname: "myapp_database"
-	mongodb_host: "mongo.server.com"	# optional, defaults to 'localhost'
-	mongodb_port: 27017			# optional, this is the default
-	mongodb_coll: "myapp_sessions"		# optional, defaults to 'sessions'
+	mongodb_session_db: "myapp_database"	# required
+	mongodb_session_coll: "myapp_sessions"	# optional, defaults to 'sessions'
+
+	# you can pass connection options to MongoDB::Connection::new() by
+	# prefixing them with 'mongodb_' like so:
+	mongodb_host: "mongo.server.com"	# defaults to 'localhost'
+	mongodb_port: 27017			# this is the default
+	mongodb_username: "mongodb_user"
+	mongodb_password: "secret_password"
 
 	# now you can use sessions in your app as described in L<Dancer::Session>.
 	# for example:
@@ -58,29 +66,27 @@ your app's settings file (or in your app's code):
 
 =item * session
 
-Give this the value "MongoDB" (take care of using this exact capitalization).
+Give this the value "MongoDB" (using this I<exact> capitalization).
 This is required.
 
-=item * mongodb_dbname
+=item * mongodb_session_db
 
 Give this the name of the MongoDB database to use. This is required.
 
-=item * mongodb_host
+=item * mongodb_session_coll
 
-The hostname of the server where the MongoDB daemon is running. Optional,
-defaults to 'localhost'.
-
-=item * mongodb_port
-
-The port on the host where the MongoDB daemon is listening. Optional,
-defaults to 27017 (the default MongoDB port).
-
-=item * mongodb_coll
-
-The name of the collection in which session objects will be stored. Optional,
-defaults to 'sessions'.
+The name of the collection in which session objects will be stored.
+Optional, defaults to 'sessions'.
 
 =back
+
+Optionally, you can also define options for initiating the connection to
+the MongoDB server, as described in L<MongoDB::Connection/"ATTRIBUTES">,
+by prefixing them with 'mongodb_'. For example, if your database requires
+authentication, you can pass the 'mongodb_username', 'mongodb_password'
+and possibly 'mongodb_db_name' to authenticate. Or, if your database server
+is not located on the same server your application resides, then you can
+provide 'mongodb_host' and possibly 'mongodb_port'.
 
 =head1 CLASS METHODS
 
@@ -91,19 +97,27 @@ defaults to 'sessions'.
 sub init {
 	my $class = shift;
 
-	my $host = setting('mongodb_host') || 'localhost';
-	my $port = setting('mongodb_port') || 27017;
-	my $db_name = setting('mongodb_dbname')
-		|| croak "You must define the name of the MongoDB database for session use in the app's settings (parameter 'mongodb_dbname'.";
-	my $coll_name = setting('mongodb_coll') || 'sessions';
+	# load settings to MongoDB::Connection::new() (if any)
+	my %opts;
+	foreach (keys %{Dancer::Config::settings()}) {
+		next unless m/^mongodb_/;
+		next if $_ eq 'mongodb_session_db' || $_ eq 'mongodb_session_coll';
+		my $key = $_;
+		$key =~ s/^mongodb_//;
+		$opts{$key} = setting($_);
+	}
 
-	my $conn = MongoDB::Connection->new(host => $host, port => $port);
+	my $db_name = setting('mongodb_session_db')
+		|| croak "You must define the name of the MongoDB database for session use in the app's settings (parameter 'mongodb_session_db)'.";
+	my $coll_name = setting('mongodb_session_coll') || 'sessions';
+
+	my $conn = MongoDB::Connection->new(%opts);
 	$DB = $conn->get_database($db_name);
 	$COLL = $DB->get_collection($coll_name);
 
-    # rodrigo: relies on Mongo for a session id
-    # optionally could use this: $class->SUPER::init();
-    $class->id( "" . $COLL->insert({}) );
+	# rodrigo: relies on Mongo for a session id
+	# optionally could use this: $class->SUPER::init();
+	$class->id(''.$COLL->insert({}));
 }
 
 =head2 create()
@@ -126,9 +140,9 @@ a false value.
 sub retrieve($$) {
 	my ($class, $id) = @_;
 
-    my $obj = $COLL->find_one({ _id => MongoDB::OID->new( value => $id ) }) || return;
+	my $obj = $COLL->find_one({ _id => MongoDB::OID->new(value => $id) }) || return;
 
-	$obj->{id} = "" . delete $obj->{_id};
+	$obj->{id} = ''.delete $obj->{_id};
 
 	return bless $obj, $class;
 }
@@ -148,7 +162,7 @@ sub flush {
 	my %obj = %$self;
 	delete $obj{id};
 
-	$COLL->update({ _id => MongoDB::OID->new( value => $self->id ) }, \%obj, { safe => 1, upsert => 1 })
+	$COLL->update({ _id => MongoDB::OID->new(value => $self->id) }, \%obj, { safe => 1, upsert => 1 })
 		|| croak "Failed writing session to MongoDB database: ".$DB->last_error;
 
 	return $self;
@@ -164,13 +178,15 @@ occurs and the object is not removed, this method will generate a warning.
 sub destroy {
 	my $self = shift;
 
-	$COLL->remove({ _id => MongoDB::OID->new( value => $_[0]->id ) }, { safe => 1, just_one => 1 })
+	$COLL->remove({ _id => MongoDB::OID->new(value => $_[0]->id) }, { safe => 1, just_one => 1 })
 		|| carp "Failed removing session from MongoDB database: ".$DB->last_error;
 }
 
-=head1 AUTHOR
+=head1 AUTHORS
 
 Ido Perlmuter, C<< <ido at ido50 dot net> >>
+
+Rodrigo de Oliveira, C<< <rodrigolive at gmail dot com> >>
 
 =head1 BUGS
 
@@ -213,7 +229,7 @@ module is based.
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2010 Ido Perlmuter.
+Copyright 2010-2011 Ido Perlmuter.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
@@ -224,5 +240,3 @@ See http://dev.perl.org/licenses/ for more information.
 =cut
 
 1;
-
-

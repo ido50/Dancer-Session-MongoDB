@@ -4,10 +4,15 @@ NAME
 SYNOPSIS
             # in your config.yml file:
             session: "MongoDB"
-            mongodb_dbname: "myapp_database"
-            mongodb_host: "mongo.server.com"        # optional, defaults to 'localhost'
-            mongodb_port: 27017                     # optional, this is the default
-            mongodb_coll: "myapp_sessions"          # optional, defaults to 'sessions'
+            mongodb_session_db: "myapp_database"    # required
+            mongodb_session_coll: "myapp_sessions"  # optional, defaults to 'sessions'
+
+            # you can pass connection options to MongoDB::Connection::new() by
+            # prefixing them with 'mongodb_' like so:
+            mongodb_host: "mongo.server.com"        # defaults to 'localhost'
+            mongodb_port: 27017                     # this is the default
+            mongodb_username: "mongodb_user"
+            mongodb_password: "secret_password"
 
             # now you can use sessions in your app as described in L<Dancer::Session>.
             # for example:
@@ -36,27 +41,26 @@ CONFIGURATION
 
     *   session
 
-        Give this the value "MongoDB" (take care of using this exact
-        capitalization). This is required.
+        Give this the value "MongoDB" (using this *exact* capitalization).
+        This is required.
 
-    *   mongodb_dbname
+    *   mongodb_session_db
 
         Give this the name of the MongoDB database to use. This is required.
 
-    *   mongodb_host
-
-        The hostname of the server where the MongoDB daemon is running.
-        Optional, defaults to 'localhost'.
-
-    *   mongodb_port
-
-        The port on the host where the MongoDB daemon is listening.
-        Optional, defaults to 27017 (the default MongoDB port).
-
-    *   mongodb_coll
+    *   mongodb_session_coll
 
         The name of the collection in which session objects will be stored.
         Optional, defaults to 'sessions'.
+
+    Optionally, you can also define options for initiating the connection to
+    the MongoDB server, as described in "ATTRIBUTES" in MongoDB::Connection,
+    by prefixing them with 'mongodb_'. For example, if your database
+    requires authentication, you can pass the 'mongodb_username',
+    'mongodb_password' and possibly 'mongodb_db_name' to authenticate. Or,
+    if your database server is not located on the same server your
+    application resides, then you can provide 'mongodb_host' and possibly
+    'mongodb_port'.
 
 CLASS METHODS
   init()
@@ -77,8 +81,10 @@ OBJECT METHODS
     error occurs and the object is not removed, this method will generate a
     warning.
 
-AUTHOR
+AUTHORS
     Ido Perlmuter, "<ido at ido50 dot net>"
+
+    Rodrigo de Oliveira, "<rodrigolive at gmail dot com>"
 
 BUGS
     Please report any bugs or feature requests to
@@ -116,7 +122,7 @@ ACKNOWLEDGEMENTS
     module is based.
 
 LICENSE AND COPYRIGHT
-    Copyright 2010 Ido Perlmuter.
+    Copyright 2010-2011 Ido Perlmuter.
 
     This program is free software; you can redistribute it and/or modify it
     under the terms of either: the GNU General Public License as published
