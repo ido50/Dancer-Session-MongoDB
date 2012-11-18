@@ -1,6 +1,8 @@
 Revision history for Dancer-Session-MongoDB
 
 {{$NEXT}}
+
+0.3       2012-11-19 01:29:39 Asia/Jerusalem
 	- Fixed bug with the destroy method
 
 0.2       2011-05-28 16:17:20 Asia/Jerusalem
