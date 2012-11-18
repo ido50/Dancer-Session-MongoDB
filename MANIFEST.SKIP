@@ -13,3 +13,5 @@
 ^cover_db$
 ^pod2htm.*\.tmp$
 ^Dancer-Session-MongoDB-.*$
+^MYMETA\.yml$
+^MYMETA\.json$
