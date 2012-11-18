@@ -2,7 +2,7 @@ package Dancer::Session::MongoDB;
 
 # ABSTRACT: MongoDB session backend for Dancer.
 
-our $VERSION = "0.2";
+our $VERSION = "0.3";
 $VERSION = eval $VERSION;
 
 use warnings;
@@ -176,8 +176,6 @@ occurs and the object is not removed, this method will generate a warning.
 =cut
 
 sub destroy {
-	my $self = shift;
-
 	$COLL->remove({ _id => MongoDB::OID->new(value => $_[0]->id) }, { safe => 1, just_one => 1 })
 		|| carp "Failed removing session from MongoDB database: ".$DB->last_error;
 }
@@ -229,7 +227,7 @@ module is based.
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2010-2011 Ido Perlmuter.
+Copyright 2010-2012 Ido Perlmuter.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
