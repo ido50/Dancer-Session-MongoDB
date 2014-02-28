@@ -21,6 +21,10 @@ my ($DB, $COLL);
 
 Dancer::Session::MongoDB - MongoDB session backend for Dancer.
 
+=head1 VERSION
+
+version 0.3
+
 =head1 SYNOPSIS
 
 	# in your config.yml file:
@@ -111,8 +115,14 @@ sub init {
 		|| croak "You must define the name of the MongoDB database for session use in the app's settings (parameter 'mongodb_session_db)'.";
 	my $coll_name = setting('mongodb_session_coll') || 'sessions';
 
-	my $conn = MongoDB::Connection->new(%opts);
-	$DB = $conn->get_database($db_name);
+
+	my $c = MongoDB::MongoClient->new();
+	# if username is set, password must be set. if username and password is set at all, it means mongodb runs on authentication (secure) mode.
+	# new mongodb_is_digest directive for specifying whether or not the given mongodb_password is already a hash.
+	if ( $opts{username} && $opts{password} ) {
+		$c->authenticate($db_name, $opts{username}, $opts{password}, $opts{is_digest} ? 'is_digest' : () );
+	}
+	$DB = $c->get_database($db_name);
 	$COLL = $DB->get_collection($coll_name);
 
 	# rodrigo: relies on Mongo for a session id
