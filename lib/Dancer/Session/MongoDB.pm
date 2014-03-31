@@ -2,17 +2,19 @@ package Dancer::Session::MongoDB;
 
 # ABSTRACT: MongoDB session backend for Dancer.
 
-our $VERSION = "0.3";
+our $VERSION = "1.000000";
 $VERSION = eval $VERSION;
 
 use warnings;
 use strict;
 use vars '$VERSION';
 use base 'Dancer::Session::Abstract';
-use MongoDB;
+use version;
+
+use Carp;
 use Dancer::Config 'setting';
 use Dancer::ModuleLoader;
-use Carp;
+use MongoDB;
 
 # singleton for the MongoDB connection
 my ($DB, $COLL);
@@ -28,7 +30,7 @@ Dancer::Session::MongoDB - MongoDB session backend for Dancer.
 	mongodb_session_db: "myapp_database"	# required
 	mongodb_session_coll: "myapp_sessions"	# optional, defaults to 'sessions'
 
-	# you can pass connection options to MongoDB::Connection::new() by
+	# you can pass connection options to MongoDB::MongoClient::new() by
 	# prefixing them with 'mongodb_' like so:
 	mongodb_host: "mongo.server.com"	# defaults to 'localhost'
 	mongodb_port: 27017			# this is the default
@@ -97,21 +99,18 @@ provide 'mongodb_host' and possibly 'mongodb_port'.
 sub init {
 	my $class = shift;
 
-	# load settings to MongoDB::Connection::new() (if any)
-	my %opts;
-	foreach (keys %{Dancer::Config::settings()}) {
-		next unless m/^mongodb_/;
-		next if $_ eq 'mongodb_session_db' || $_ eq 'mongodb_session_coll';
-		my $key = $_;
-		$key =~ s/^mongodb_//;
-		$opts{$key} = setting($_);
-	}
+	# load settings to MongoDB::MongoClient::new() (if any)
+	my %opts = map { (/^mongodb_(.+)$/)[0] => setting($_) } grep { m/^mongodb_/ } keys(%{Dancer::Config::settings()});
 
-	my $db_name = setting('mongodb_session_db')
+	my $db_name = delete($opts{session_db})
 		|| croak "You must define the name of the MongoDB database for session use in the app's settings (parameter 'mongodb_session_db)'.";
-	my $coll_name = setting('mongodb_session_coll') || 'sessions';
+	my $coll_name = delete($opts{session_coll}) || 'sessions';
 
-	my $conn = MongoDB::Connection->new(%opts);
+	my $isa = version->parse($MongoDB::VERSION) < v0.502.0 ?
+		'MongoDB::Connection' :
+			'MongoDB::MongoClient';
+
+	my $conn = $isa->new(%opts);
 	$DB = $conn->get_database($db_name);
 	$COLL = $DB->get_collection($coll_name);
 
@@ -227,7 +226,7 @@ module is based.
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2010-2012 Ido Perlmuter.
+Copyright 2010-2014 Ido Perlmuter.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
